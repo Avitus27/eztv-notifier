@@ -1,5 +1,6 @@
 import smtplib
 import os
+import authemail
 
 from os.path import join, dirname
 from dotenv import load_dotenv
@@ -10,6 +11,7 @@ load_dotenv(dotenv_path)
 
 recipient = os.environ.get("RECIPIENT")
 from_email = os.environ.get("FROM_EMAIL")
+smtp_host = os.environ.get("SMTP_HOST")
 
 # get JSON from EZTV
 
@@ -20,6 +22,6 @@ msg['Subject'] = 'New episodes have been found!'
 msg['From'] = from_email
 msg['To'] = recipient
 
-s = smtplib.SMTP('localhost')
+s = smtplib.SMTP(smtp_host)
 s.sendmail(from_email, recipient, msg.as_string())
 s.quit()
