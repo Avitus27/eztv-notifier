@@ -11,7 +11,13 @@ load_dotenv(dotenv_path)
 
 recipient = os.environ.get("RECIPIENT")
 from_email = os.environ.get("FROM_EMAIL")
-smtp_host = os.environ.get("SMTP_HOST")
+mail_host = os.environ.get("MAIL_HOST")
+if not os.environ.get("USE_SMTP"):
+    use_smtp = False
+    username = os.environ.get("MAIL_USER")
+    password = os.environ.get("MAIL_PASS")
+else:
+    use_smtp = True
 
 # get JSON from EZTV
 
@@ -22,6 +28,7 @@ msg['Subject'] = 'New episodes have been found!'
 msg['From'] = from_email
 msg['To'] = recipient
 
-s = smtplib.SMTP(smtp_host)
-s.sendmail(from_email, recipient, msg.as_string())
-s.quit()
+if use_smtp:
+    s = smtplib.SMTP(mail_host)
+    s.sendmail(from_email, recipient, msg.as_string())
+    s.quit()
