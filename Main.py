@@ -23,14 +23,21 @@ if not os.environ.get("USE_SMTP"):
 else:
     use_smtp = True
 
+file = open('last_torrent', 'r')
+last_torrent = file.readline()
+#print( last_torrent )
+file.close()
+
 # get JSON from EZTV
 request = requests.get('https://eztv.ag/api/get-torrents')
 if request.status_code == 200:
-    last_torrent_id = request.json()['torrents'][0]['id']
     file = open('last_torrent', 'w')
-    file.write(str(last_torrent_id) + "\r\n")
+    newest_torrent = str(request.json()['torrents'][0]['id'])
+    file.write(newest_torrent)
     file.close()
-    print(request.json()['torrents'][0]['id'])
+    #print(newest_torrent)
+    #print(last_torrent == newest_torrent)
+    exit()
 else:
     print(request.status_code)
     exit()
