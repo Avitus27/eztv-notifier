@@ -23,13 +23,15 @@ if not os.environ.get("USE_SMTP"):
 else:
     use_smtp = True
 
+max_torrents = os.environ.get("MAX_TORRENTS")
+
 file = open('last_torrent', 'r')
-last_torrent = file.readline()
+last_seen_torrent = file.readline()
 #print( last_torrent )
 file.close()
 
 # get JSON from EZTV
-request = requests.get('https://eztv.ag/api/get-torrents')
+request = requests.get('https://eztv.ag/api/get-torrents?limit=' + max_torrents + 'page=1')
 if request.status_code == 200:
     file = open('last_torrent', 'w')
     newest_torrent = str(request.json()['torrents'][0]['id'])
@@ -42,6 +44,9 @@ else:
     print(request.status_code)
     exit()
 
+i = 0
+while not i == last_seen_torrent:
+    pass
 # process it, checking for new episodes of the chosen shows
 message_text = "Placeholder text"
 
