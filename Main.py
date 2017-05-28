@@ -3,6 +3,7 @@ import os
 import authemail
 import json
 import requests
+import sys
 
 from os.path import join, dirname
 from dotenv import load_dotenv
@@ -31,7 +32,7 @@ last_seen_torrent = file.readline()
 file.close()
 
 # get JSON from EZTV
-request = requests.get('https://eztv.ag/api/get-torrents?limit=' + max_torrents + 'page=1')
+request = requests.get('https://eztv.ag/api/get-torrents?limit=' + max_torrents + '&page=1')
 if request.status_code == 200:
     file = open('last_torrent', 'w')
     newest_torrent = str(request.json()['torrents'][0]['id'])
@@ -44,8 +45,11 @@ else:
     print(request.status_code)
     exit()
 
-i = 0
-while not i == last_seen_torrent:
+last_fetched_torrent_id = sys.maxint
+#last_fetched_torrent_id = (int) request.json()['torrents'][max_torrents - 1]['id']
+page = 1
+while not last_fetched_torrent_id <= last_seen_torrent:
+
     pass
 # process it, checking for new episodes of the chosen shows
 message_text = "Placeholder text"
