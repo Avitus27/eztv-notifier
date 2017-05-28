@@ -39,17 +39,24 @@ if request.status_code == 200:
     file.write(newest_torrent)
     file.close()
     #print(newest_torrent)
-    #print(last_torrent == newest_torrent)
-    exit()
+    #print(last_seen_torrent == newest_torrent)
+    #exit()
 else:
     print(request.status_code)
     exit()
 
 last_fetched_torrent_id = sys.maxint
+# Need to think about using this or the above
 #last_fetched_torrent_id = (int) request.json()['torrents'][max_torrents - 1]['id']
 page = 1
 while not last_fetched_torrent_id <= last_seen_torrent:
-
+# TODO: These lines need to be redone.
+#    for id in request.json()['torrents']:
+#        if any(
+#        if request.json()['torrents'][id]['title'] 
+    last_fectched_torrent_id = (int) request.json()['torrents'][1]['id']
+    page += 1
+    request = requests.get('https://eztv.ag/api/get-torrents?limit=' + max_torrents + '&page=2')
     pass
 # process it, checking for new episodes of the chosen shows
 message_text = "Placeholder text"
