@@ -26,6 +26,8 @@ else:
 
 max_torrents = os.environ.get("MAX_TORRENTS")
 
+show_list = os.environ.get("SHOW_LIST")
+
 file = open('last_torrent', 'r')
 last_seen_torrent = file.readline()
 #print( last_torrent )
@@ -51,10 +53,12 @@ last_fetched_torrent_id = sys.maxint
 page = 1
 while not last_fetched_torrent_id <= last_seen_torrent:
 # TODO: These lines need to be redone.
-#    for id in request.json()['torrents']:
-#        if any(
+    for torrent in request.json()['torrents']:
+        if any(show in torrent['title'] for show in show_list):
+            print(torrent)
+            
 #        if request.json()['torrents'][id]['title'] 
-    last_fectched_torrent_id = (int) request.json()['torrents'][1]['id']
+    last_fectched_torrent_id = request.json()['torrents'][1]['id']
     page += 1
     request = requests.get('https://eztv.ag/api/get-torrents?limit=' + max_torrents + '&page=2')
     pass
