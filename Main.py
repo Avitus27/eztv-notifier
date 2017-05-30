@@ -50,20 +50,24 @@ else:
 last_fetched_torrent_id = sys.maxint
 # Need to think about using this or the above
 #last_fetched_torrent_id = (int) request.json()['torrents'][max_torrents - 1]['id']
+torrent_found = False
 page = 1
 while not last_fetched_torrent_id <= last_seen_torrent:
 # TODO: These lines need to be redone.
     for torrent in request.json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
+            torrent_found = True
             print(torrent)
             
 #        if request.json()['torrents'][id]['title'] 
     last_fectched_torrent_id = request.json()['torrents'][1]['id']
     page += 1
     request = requests.get('https://eztv.ag/api/get-torrents?limit=' + max_torrents + '&page=2')
-    pass
 # process it, checking for new episodes of the chosen shows
 message_text = "Placeholder text"
+
+if not torrent_found:
+    exit()
 
 msg = MIMEText(message_text) # To be replaced with details of the new show and links
 msg['Subject'] = mail_subject
