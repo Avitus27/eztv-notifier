@@ -3,6 +3,9 @@
 # Author: https://github.com/maksaraswat/
 # Source: https://github.com/maksaraswat/Python/blob/master/authemail.py
 
+# Adaptations have been made as per GNU GPL v2.0
+# This version inherits the GNU GPL License
+
 import smtplib
 import logging
 import string
@@ -21,27 +24,30 @@ else:
 
 # This is for logging any exceptions and/or errors. It will be logged in /var/log/syslog with message similar to
 # '2014-08-18 16:24:58,064 ERROR service_start global name 'sendeail' is not defined'
-logging.basicConfig(filename=log_location, format='%(asctime)s %(levelname)s %(funcName)s %(message)s', level=logging.ERROR)
+logging.basicConfig(filename=log_location,
+                    format='%(asctime)s %(levelname)s %(funcName)s %(message)s', level=logging.ERROR)
 
-# This function is used for sending authenticated email. 
-def sendemail(status,To, From, Server, port, username, password, bodymessage):
-    try:    
+
+def sendemail(status, To, From, Server, port, username, password, bodymessage):
+    try:
         SUBJECT = status
         TO = To
         FROM = From
         text = bodymessage
-        BODY = string.join(( "From: %s" % FROM, "To: %s" % TO, "Subject: %s" % SUBJECT , "", text), "\r\n")
+        BODY = string.join(("From: %s" % FROM, "To: %s" %
+                            TO, "Subject: %s" % SUBJECT, "", text), "\r\n")
         server = smtplib.SMTP()
         server.connect(Server, port)
         server.starttls()
-        server.login(username, password)        
+        server.login(username, password)
         server.sendmail(FROM, [TO], BODY)
         server.quit()
     except Exception as e:
         logging.error(e)
-        
+
+
 def main():
-    sendemail(status,To, From, Server, port, username, password, bodymessage)       
+    sendemail(status, To, From, Server, port, username, password, bodymessage)
 
 if __name__ == '__main__':
     main()
