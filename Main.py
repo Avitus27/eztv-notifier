@@ -35,42 +35,58 @@ last_seen_torrent = file.readline()
 file.close()
 
 # get JSON from EZTV
-request = requests.get('https://eztv.ag/api/get-torrents?limit=' + str(max_torrents) + '&page=1')
-if request.status_code == 200:
+request = []
+request.append(
+    requests.get(
+        'https://eztv.ag/api/get-torrents?limit=' +
+        str(max_torrents) +
+        '&page=1'))
+if request[-1].status_code == 200:
     file = open('last_torrent', 'w')
-    newest_torrent = str(request.json()['torrents'][0]['id'])
+    newest_torrent = str(request[-1].json()['torrents'][0]['id'])
     file.write(newest_torrent)
     file.close()
-    #print(newest_torrent)
+    # print(newest_torrent)
     #print(last_seen_torrent == newest_torrent)
-    #exit()
+    # exit()
 else:
-    print(request.status_code)
+    print(request[-1].status_code)
     exit()
 
 #last_fetched_torrent_id = sys.maxint
 # Need to think about using this or the above
-last_fetched_torrent_id = int(request.json()['torrents'][max_torrents - 1]['id'])
+last_fetched_torrent_id = int(
+    request[-1].json()['torrents'][max_torrents - 1]['id'])
 torrent_found = False
 page = 1
 
-print("last_seen_torrent: " + str(last_seen_torrent) + "\r\nlast_fetched_torrent_id: " + str(last_fetched_torrent_id))
+print(
+    "last_seen_torrent: " +
+    str(last_seen_torrent) +
+    "\r\nlast_fetched_torrent_id: " +
+    str(last_fetched_torrent_id))
 
 while last_fetched_torrent_id <= last_seen_torrent:
-# TODO: These lines need to be redone.
+    # TODO: These lines need to be redone.
     print("Page: " + str(page))
     print("last_seen_torrent: " + str(last_seen_torrent))
     print("last_fetched_torrent_id: " + str(last_fetched_torrent_id))
 #    for torrent in request.json()['torrents']:
 #        if any(show in torrent['title'] for show in show_list):
 #            torrent_found = True
-            #print(torrent)
-            #print("Torrent Found!")
-            
+    # print(torrent)
+    #print("Torrent Found!")
+
 #        if request.json()['torrents'][id]['title']
-    last_fectched_torrent_id = request.json()['torrents'][ max_torrents - 1]['id']
+    last_fectched_torrent_id = request[-1].json(
+    )['torrents'][max_torrents - 1]['id']
     page += 1
-    request = requests.get('https://eztv.ag/api/get-torrents?limit=' + str(max_torrents) + '&page=' + str(page))
+    request.append(
+        requests.get(
+            'https://eztv.ag/api/get-torrents?limit=' +
+            str(max_torrents) +
+            '&page=' +
+            str(page)))
 # process it, checking for new episodes of the chosen shows
 message_text = "Placeholder text"
 
@@ -78,7 +94,8 @@ if not torrent_found:
     print("None found")
     exit()
 
-msg = MIMEText(message_text) # To be replaced with details of the new show and links
+# To be replaced with details of the new show and links
+msg = MIMEText(message_text)
 msg['Subject'] = mail_subject
 msg['From'] = from_email
 msg['To'] = recipient
@@ -88,4 +105,12 @@ if use_smtp:
     s.sendmail(from_email, recipient, msg.as_string())
     s.quit()
 else:
-    authemail.sendemail(mail_subject, recipient, from_email, mail_host, mail_port, username, password, message_text)
+    authemail.sendemail(
+        mail_subject,
+        recipient,
+        from_email,
+        mail_host,
+        mail_port,
+        username,
+        password,
+        message_text)
