@@ -52,7 +52,8 @@ else:
 
 #last_fetched_torrent_id = sys.maxint
 # Need to think about using this or the above
-last_fetched_torrent_id = int(
+last_fetched_torrent_id = [0]
+last_fetched_torrent_id[0] = int(
     request[-1].json()['torrents'][max_torrents - 1]['id'])
 torrent_found = False
 page = 1
@@ -61,21 +62,21 @@ print(
     "last_seen_torrent: " +
     str(last_seen_torrent) +
     "\r\nlast_fetched_torrent_id: " +
-    str(last_fetched_torrent_id))
+    str(last_fetched_torrent_id[0]))
 
-while last_fetched_torrent_id <= last_seen_torrent:
+while last_fetched_torrent_id[0] <= last_seen_torrent:
     # TODO: These lines need to be redone.
     print("Page: " + str(page))
     print("last_seen_torrent: " + str(last_seen_torrent))
-    print("last_fetched_torrent_id: " + str(last_fetched_torrent_id))
-#    for torrent in request.json()['torrents']:
-#        if any(show in torrent['title'] for show in show_list):
-#            torrent_found = True
+    print("last_fetched_torrent_id: " + str(last_fetched_torrent_id[0]))
+    for torrent in request[-1].json()['torrents']:
+        if any(show in torrent['title'] for show in show_list):
+            torrent_found = True
     # print(torrent)
     #print("Torrent Found!")
 
 #        if request.json()['torrents'][id]['title']
-    last_fectched_torrent_id = request[-1].json(
+    last_fetched_torrent_id[0] = request[-1].json(
     )['torrents'][max_torrents - 1]['id']
     page += 1
     request.append(
