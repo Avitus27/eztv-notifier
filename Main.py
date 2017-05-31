@@ -46,9 +46,6 @@ if request[-1].status_code == 200:
     newest_torrent = str(request[-1].json()['torrents'][0]['id'])
     file.write(newest_torrent)
     file.close()
-    # print(newest_torrent)
-    #print(last_seen_torrent == newest_torrent)
-    # exit()
 else:
     print(request[-1].status_code)
     exit()
