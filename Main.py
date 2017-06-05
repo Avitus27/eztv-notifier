@@ -30,7 +30,7 @@ max_torrents = int(max_torrents)
 show_list = os.environ.get("SHOW_LIST")
 
 file = open('last_torrent', 'r')
-last_seen_torrent = file.readline()
+last_seen_torrent = int(file.readline())
 #print( last_torrent )
 file.close()
 
@@ -43,7 +43,8 @@ request.append(
         '&page=1'))
 if request[-1].status_code == 200:
     file = open('last_torrent', 'w')
-    newest_torrent = str(request[-1].json()['torrents'][0]['id'])
+    newest_torrent = str(
+        request[-1].json()['torrents'][0]['date_released_unix'])
     file.write(newest_torrent)
     file.close()
 else:
@@ -54,9 +55,10 @@ else:
 # Need to think about using this or the above
 last_fetched_torrent_id = [0]
 last_fetched_torrent_id[0] = int(
-    request[-1].json()['torrents'][max_torrents - 1]['id'])
+    request[-1].json()['torrents'][max_torrents - 1]['date_released_unix'])
 torrent_found = False
 page = 1
+message_text = ""
 
 print(
     "last_seen_torrent: " +
@@ -64,7 +66,7 @@ print(
     "\r\nlast_fetched_torrent_id: " +
     str(last_fetched_torrent_id[0]))
 
-while last_fetched_torrent_id[0] <= last_seen_torrent:
+while last_fetched_torrent_id[0] > last_seen_torrent:
     # TODO: These lines need to be redone.
     print("Page: " + str(page))
     print("last_seen_torrent: " + str(last_seen_torrent))
@@ -72,12 +74,15 @@ while last_fetched_torrent_id[0] <= last_seen_torrent:
     for torrent in request[-1].json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
             torrent_found = True
-    # print(torrent)
-    #print("Torrent Found!")
+            # print(torrent)
+            print("Torrent Found!")
+            message_text += "<a href=\"" + \
+                str(torrent['magnet_url']) + "\">" + \
+                str(torrent['title']) + "</a>\r\n"
 
 #        if request.json()['torrents'][id]['title']
-    last_fetched_torrent_id[0] = request[-1].json(
-    )['torrents'][max_torrents - 1]['id']
+    last_fetched_torrent_id[0] = int(request[-1].json(
+    )['torrents'][max_torrents - 1]['date_released_unix'])
     page += 1
     request.append(
         requests.get(
@@ -86,7 +91,6 @@ while last_fetched_torrent_id[0] <= last_seen_torrent:
             '&page=' +
             str(page)))
 # process it, checking for new episodes of the chosen shows
-message_text = "Placeholder text"
 
 if not torrent_found:
     print("None found")
