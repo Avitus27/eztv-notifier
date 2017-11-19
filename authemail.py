@@ -25,7 +25,8 @@ else:
 # This is for logging any exceptions and/or errors. It will be logged in /var/log/syslog with message similar to
 # '2014-08-18 16:24:58,064 ERROR service_start global name 'sendeail' is not defined'
 logging.basicConfig(filename=log_location,
-                    format='%(asctime)s %(levelname)s %(funcName)s %(message)s', level=logging.ERROR)
+                    format='%(asctime)s %(levelname)s %(funcName)s %(message)s',
+                    level=logging.ERROR)
 
 
 def sendemail(status, To, From, Server, port, username, password, bodymessage):

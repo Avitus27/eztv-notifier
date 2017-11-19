@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import smtplib
 import os
 import authemail
@@ -24,10 +26,11 @@ if not os.environ.get("USE_SMTP"):
 else:
     use_smtp = True
 
-max_torrents = os.environ.get("MAX_TORRENTS")
-max_torrents = int(max_torrents)
+max_torrents = int(os.environ.get("MAX_TORRENTS"))
 
 show_list = os.environ.get("SHOW_LIST")
+
+show_list = show_list.split(",")
 
 file = open('last_torrent', 'r')
 last_seen_torrent = int(file.readline())
@@ -64,7 +67,8 @@ print(
     "last_seen_torrent: " +
     str(last_seen_torrent) +
     "\r\nlast_fetched_torrent_id: " +
-    str(last_fetched_torrent_id[0]))
+    str(last_fetched_torrent_id[0])
+	)
 
 while last_fetched_torrent_id[0] > last_seen_torrent:
     # TODO: These lines need to be redone.
