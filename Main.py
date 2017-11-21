@@ -69,9 +69,6 @@ plain_text = "New Torrents available:\n"
 rich_text = "New Torrents available:<br>\n"
 
 while last_fetched_torrent_id[0] > last_seen_torrent:
-    print("Page: " + str(page))
-    print("last_seen_torrent: " + str(last_seen_torrent))
-    print("last_fetched_torrent_id: " + str(last_fetched_torrent_id[0]))
     for torrent in request[-1].json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
             torrent_found = True
