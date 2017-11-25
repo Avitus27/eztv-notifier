@@ -4,6 +4,7 @@ import os
 import json
 import requests
 import sys
+import argparse
 
 from os.path import join, dirname
 from email.mime.text import MIMEText
@@ -15,29 +16,105 @@ if sys.version_info[0] > 2:
     print("Python3 not fully supported yet")
     exit(1)
 
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
+parser = argparse.ArgumentParser(
+    description="Python based tool for getting torrents of shows from eztv",
+    prog="eztv-notifier",
+    epilog="Values passed as arguments override the .env")
+parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+parser.add_argument('-v', '--verbose', action="store_true",
+                    help="Generates more output for debugging")
+parser.add_argument(
+    '-e',
+    '--env',
+    nargs='?',
+    help="Sets the path to the .env file. If the string is 'False', then the program will not look for a .env file (not recommended). Default is the directory the file is running in.")
+parser.add_argument(
+    '-r',
+    '--recipient',
+    help="Specifies what email address the script should send to.")
+parser.add_argument(
+    '-s',
+    '--sender',
+    help="Specifies what email address the script should send from.")
+parser.add_argument(
+    '--smtp',
+    action="store_true",
+    help="If set, the script will try using SMTP instead of logging in.")
+parser.add_argument(
+    '--host',
+    help="Specifies the address of the mail host to send from. IP:PORT format not accepted")
+parser.add_argument(
+    '--port',
+    help="Specifies the port of the mail host to send from.")
+parser.add_argument(
+    '-u',
+    '--user',
+    help="The username to log into the mail host. Not used for SMTP.")
+parser.add_argument(
+    '-p',
+    '--password',
+    help="The password to log into the mail host. Not used for SMTP.")
+parser.add_argument(
+    '--subject',
+    help="The subject line of the email to be sent.")
+parser.add_argument(
+    '--rich',
+    action="store_true",
+    help="If set, the email will be formatted with full HTML. May not work in all clients (GMail strips magnet links for example).")
+parser.add_argument(
+    '--max',
+    help="The max number of torrents to get per requeset to eztv.")
+parser.add_argument(
+    '--shows',
+    nargs="*",
+    help="A list of the shows to search for on eztv, space seperated, may be encapuslated in double quotes.")
 
-recipient = os.environ.get("RECIPIENT")
-from_email = os.environ.get("FROM_EMAIL")
-mail_host = os.environ.get("MAIL_HOST")
-mail_port = os.environ.get("MAIL_PORT")
-mail_subject = os.environ.get("MAIL_SUBJECT")
-if not os.environ.get("FULL_RICH_MAIL"):
-    rich_mail = False
+
+verbose = False
+setup_error = False
+use_env = True
+args = parser.parse_args()
+
+if args.verbose:
+    verbose = True
+if args.env == "False":
+    use_env = False
+if use_env:
+    if args.env:
+        dotenv_path = join(dirname(args.env), '.env')
+    else:
+        dotenv_path = join(dirname(__file__), '.env')
+    load_dotenv(dotenv_path)
+    recipient = os.environ.get("RECIPIENT")
+    from_email = os.environ.get("FROM_EMAIL")
+    mail_host = os.environ.get("MAIL_HOST")
+    mail_port = os.environ.get("MAIL_PORT")
+    mail_subject = os.environ.get("MAIL_SUBJECT")
+    max_torrents = int(os.environ.get("MAX_TORRENTS"))
+    show_list = os.environ.get("SHOW_LIST").split(",")
+    rich_mail = os.environ.get("FULL_RICH_MAIL") or args.rich
+    use_smtp = os.environ.get("USE_SMTP") or args.smtp
 else:
-    rich_mail = True
-if not os.environ.get("USE_SMTP"):
-    use_smtp = False
+    rich_mail = args.rich
+    use_smtp = args.smtp
+
+if args.recipient:
+    recipient = args.recipient
+if args.sender:
+    from_email = args.sender
+if args.host:
+    mail_host = args.host
+if args.port:
+    mail_port = args.port
+if args.subject:
+    mail_subject = args.subject
+if not use_smtp:
     username = os.environ.get("MAIL_USER")
     password = os.environ.get("MAIL_PASS")
-else:
-    use_smtp = True
-
-max_torrents = int(os.environ.get("MAX_TORRENTS"))
-
-show_list = os.environ.get("SHOW_LIST")
-show_list = show_list.split(",")
+if args.max:
+    max_torrents = args.max
+if args.shows:
+    show_list = args.show
 
 file = open('last_torrent', 'r')
 last_seen_torrent = int(file.readline())
@@ -68,10 +145,12 @@ page = 1
 plain_text = "New Torrents available:\n"
 rich_text = "New Torrents available:<br>\n"
 
+if verbose:
+    print "Last seen torrent: %d" % last_seen_torrent
+
 while last_fetched_torrent_id[0] > last_seen_torrent:
-    print("Page: " + str(page))
-    print("last_seen_torrent: " + str(last_seen_torrent))
-    print("last_fetched_torrent_id: " + str(last_fetched_torrent_id[0]))
+    if verbose:
+        print "Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id)
     for torrent in request[-1].json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
             torrent_found = True
@@ -96,22 +175,40 @@ while last_fetched_torrent_id[0] > last_seen_torrent:
             str(page)))
 
 if not torrent_found:
-    print("None found")
+    if verbose:
+        print "No new torrents found, exiting."
     exit(0)
 
-msg = MIMEMultipart('alternative')
-msg['Subject'] = mail_subject
-msg['From'] = from_email
-msg['To'] = recipient
-part1 = MIMEText(plain_text, 'plain')
-part2 = MIMEText(rich_text, 'html')
-msg.attach(part1)
-msg.attach(part2)
+try:
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = mail_subject
+    msg['From'] = from_email
+    msg['To'] = recipient
+    part1 = MIMEText(plain_text, 'plain')
+    part2 = MIMEText(rich_text, 'html')
+    msg.attach(part1)
+    msg.attach(part2)
 
-s = SMTP(mail_host)
+    s = SMTP(mail_host)
 
-if not use_smtp:
-    s.login(username, password)
+    if not use_smtp:
+        s.login(username, password)
 
-s.sendmail(from_email, recipient, msg.as_string())
-s.quit()
+    s.sendmail(from_email, recipient, msg.as_string())
+    s.quit()
+except SMTPRecipientsRefused as e:
+    print "Recipients were refused"
+    print e
+    exit(1)
+except SMTPHeloError:
+    print "The mail server didn't reply to our HELO, exiting"
+    exit(1)
+except SMTPSenderRefused:
+    print "The mail server doesn't allow this user to send mail. Are you sure this user exits?"
+    exit(1)
+except SMTPDataError:
+    print "The server replied with an unxpected error code. exiting"
+    exit(1)
+except BaseException:
+    print "An unhandled error occured. The program will now quit"
+    exit(1)
