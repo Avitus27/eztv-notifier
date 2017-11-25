@@ -146,11 +146,11 @@ plain_text = "New Torrents available:\n"
 rich_text = "New Torrents available:<br>\n"
 
 if verbose:
-	print "Last seen torrent: %d" % last_seen_torrent
+    print "Last seen torrent: %d" % last_seen_torrent
 
 while last_fetched_torrent_id[0] > last_seen_torrent:
-	if verbose:
-		print "Currently on page %d, last fetched torrent: %d" % page, % last_fetched_torrent_id
+    if verbose:
+        print "Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id)
     for torrent in request[-1].json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
             torrent_found = True
@@ -175,40 +175,40 @@ while last_fetched_torrent_id[0] > last_seen_torrent:
             str(page)))
 
 if not torrent_found:
-	if verbose:
-		print "No new torrents found, exiting."
+    if verbose:
+        print "No new torrents found, exiting."
     exit(0)
 
 try:
-	msg = MIMEMultipart('alternative')
-	msg['Subject'] = mail_subject
-	msg['From'] = from_email
-	msg['To'] = recipient
-	part1 = MIMEText(plain_text, 'plain')
-	part2 = MIMEText(rich_text, 'html')
-	msg.attach(part1)
-	msg.attach(part2)
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = mail_subject
+    msg['From'] = from_email
+    msg['To'] = recipient
+    part1 = MIMEText(plain_text, 'plain')
+    part2 = MIMEText(rich_text, 'html')
+    msg.attach(part1)
+    msg.attach(part2)
 
-	s = SMTP(mail_host)
+    s = SMTP(mail_host)
 
-	if not use_smtp:
-		s.login(username, password)
+    if not use_smtp:
+        s.login(username, password)
 
-	s.sendmail(from_email, recipient, msg.as_string())
-	s.quit()
+    s.sendmail(from_email, recipient, msg.as_string())
+    s.quit()
 except SMTPRecipientsRefused as e:
-	print "Recipients were refused"
-	print e
-	exit(1)
+    print "Recipients were refused"
+    print e
+    exit(1)
 except SMTPHeloError:
-	print "The mail server didn't reply to our HELO, exiting"
-	exit(1)
+    print "The mail server didn't reply to our HELO, exiting"
+    exit(1)
 except SMTPSenderRefused:
-	print "The mail server doesn't allow this user to send mail. Are you sure this user exits?"
-	exit(1)
+    print "The mail server doesn't allow this user to send mail. Are you sure this user exits?"
+    exit(1)
 except SMTPDataError:
-	print "The server replied with an unxpected error code. exiting"
-	exit(1)
-except:
-	print "An unhandled error occured. The program will now quit"
-	exit(1)
+    print "The server replied with an unxpected error code. exiting"
+    exit(1)
+except BaseException:
+    print "An unhandled error occured. The program will now quit"
+    exit(1)
