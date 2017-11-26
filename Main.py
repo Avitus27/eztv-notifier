@@ -150,7 +150,7 @@ if verbose:
 
 while last_fetched_torrent_id[0] > last_seen_torrent:
     if verbose:
-        print "Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id)
+        print "Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0])
     for torrent in request[-1].json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
             torrent_found = True
