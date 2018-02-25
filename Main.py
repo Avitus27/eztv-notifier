@@ -10,7 +10,7 @@ from os.path import join, dirname
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
-from smtplib import SMTP
+from smtplib import SMTP, SMTPRecipientsRefused, SMTPHeloError, SMTPSenderRefused, SMTPDataError
 
 if sys.version_info[0] > 2:
     print("Python3 not fully supported yet")
@@ -209,6 +209,7 @@ except SMTPSenderRefused:
 except SMTPDataError:
     print "The server replied with an unxpected error code. exiting"
     exit(1)
-except BaseException:
+except BaseException as e:
     print "An unhandled error occured. The program will now quit"
+    print "> " + str(e)
     exit(1)
