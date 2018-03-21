@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from smtplib import SMTP, SMTPRecipientsRefused, SMTPHeloError, SMTPSenderRefused, SMTPDataError
 
 if sys.version_info[0] > 2:
-    print("Python3 not fully supported yet")
+    sys.stderr.write("Python3 not fully supported yet\n")
     exit(1)
 
 parser = argparse.ArgumentParser(
@@ -68,12 +68,16 @@ parser.add_argument(
     '--shows',
     nargs="*",
     help="A list of the shows to search for on eztv, space seperated, may be encapuslated in double quotes.")
-
+parser.add_argument(
+    '-a',
+    '--api',
+    help="Set the root of the API. e.g. ./Main --api https://eztv.ag/api/get-torrents")
 
 verbose = False
 setup_error = False
 use_env = True
 args = parser.parse_args()
+api_root = "https://eztv.ag/api/get-torrents"
 
 if args.verbose:
     verbose = True
@@ -94,6 +98,8 @@ if use_env:
     show_list = os.environ.get("SHOW_LIST").split(",")
     rich_mail = os.environ.get("FULL_RICH_MAIL") or args.rich
     use_smtp = os.environ.get("USE_SMTP") or args.smtp
+    if os.environ.get("API_ROOT"):
+        api_root = os.environ.get("API_ROOT")
 else:
     rich_mail = args.rich
     use_smtp = args.smtp
@@ -115,6 +121,8 @@ if args.max:
     max_torrents = args.max
 if args.shows:
     show_list = args.show
+if args.api:
+    api_root = args.api
 
 file = open('last_torrent', 'r')
 last_seen_torrent = int(file.readline())
@@ -124,7 +132,8 @@ file.close()
 request = []
 request.append(
     requests.get(
-        'https://eztv.ag/api/get-torrents?limit=' +
+        api_root +
+        '?limit=' +
         str(max_torrents) +
         '&page=1'))
 if request[-1].status_code == 200:
@@ -134,7 +143,7 @@ if request[-1].status_code == 200:
     file.write(newest_torrent)
     file.close()
 else:
-    print(request[-1].status_code)
+    sys.stderr.write(request[-1].status_code + "\n")
     exit(1)
 
 last_fetched_torrent_id = [0]
@@ -169,7 +178,8 @@ while last_fetched_torrent_id[0] > last_seen_torrent:
     page += 1
     request.append(
         requests.get(
-            'https://eztv.ag/api/get-torrents?limit=' +
+            api_root +
+            '?limit=' +
             str(max_torrents) +
             '&page=' +
             str(page)))
@@ -197,19 +207,21 @@ try:
     s.sendmail(from_email, recipient, msg.as_string())
     s.quit()
 except SMTPRecipientsRefused as e:
-    print "Recipients were refused"
-    print e
+    sys.stderr.write("Recipients were refused\n")
+    sys.stderr.write(e)
     exit(1)
 except SMTPHeloError:
-    print "The mail server didn't reply to our HELO, exiting"
+    sys.stderr.write("The mail server didn't reply to our HELO, exiting\n")
     exit(1)
 except SMTPSenderRefused:
-    print "The mail server doesn't allow this user to send mail. Are you sure this user exits?"
+    sys.stderr.write(
+        "The mail server doesn't allow this user to send mail. Are you sure this user exits?\n")
     exit(1)
 except SMTPDataError:
-    print "The server replied with an unxpected error code. exiting"
+    sys.stderr.write(
+        "The server replied with an unxpected error code. exiting\n")
     exit(1)
 except BaseException as e:
-    print "An unhandled error occured. The program will now quit"
-    print "> " + str(e)
+    sys.stderr.write("An unhandled error occured. The program will now quit\n")
+    sys.stderr.write("> " + str(e) + "\n")
     exit(1)
