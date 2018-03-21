@@ -122,7 +122,7 @@ if args.max:
 if args.shows:
     show_list = args.show
 if args.api:
-    api_root = arg.api
+    api_root = args.api
 
 file = open('last_torrent', 'r')
 last_seen_torrent = int(file.readline())
