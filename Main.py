@@ -5,6 +5,8 @@ import json
 import requests
 import sys
 import argparse
+import logging
+import verboselogs
 
 from os.path import join, dirname
 from email.mime.text import MIMEText
@@ -16,11 +18,14 @@ if sys.version_info[0] > 2:
     sys.stderr.write("Python3 not fully supported yet\n")
     exit(1)
 
+VERSION = "1.2"
+PROG_NAME = "eztv-notifier"
+
 parser = argparse.ArgumentParser(
     description="Python based tool for getting torrents of shows from eztv",
-    prog="eztv-notifier",
+    prog=PROG_NAME,
     epilog="Values passed as arguments override the .env")
-parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+parser.add_argument('--version', action='version', version='%(PROG_NAME)s %(VERSION)s' % locals())
 parser.add_argument('-v', '--verbose', action="store_true",
                     help="Generates more output for debugging")
 parser.add_argument(
@@ -74,13 +79,23 @@ parser.add_argument(
     help="Set the root of the API. e.g. ./Main --api https://eztv.ag/api/get-torrents")
 
 verbose = False
+verboseLevel = 0;
 setup_error = False
 use_env = True
 args = parser.parse_args()
 api_root = "https://eztv.ag/api/get-torrents"
 
+logger = verboselogs.VerboseLogger('%(prog)s')
+logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.INFO)
+
 if args.verbose:
     verbose = True
+    verboseLevel += 1
+
+if verbose:
+    logger.setLevel(logging.DEBUG)
+
 if args.env == "False":
     use_env = False
 if use_env:
@@ -143,7 +158,7 @@ if request[-1].status_code == 200:
     file.write(newest_torrent)
     file.close()
 else:
-    sys.stderr.write(request[-1].status_code + "\n")
+    logger.critical(request[-1].status_code + "\n")
     exit(1)
 
 last_fetched_torrent_id = [0]
@@ -154,12 +169,10 @@ page = 1
 plain_text = "New Torrents available:\n"
 rich_text = "New Torrents available:<br>\n"
 
-if verbose:
-    print "Last seen torrent: %d" % last_seen_torrent
+logger.debug("Last seen torrent: %d" % last_seen_torrent)
 
 while last_fetched_torrent_id[0] > last_seen_torrent:
-    if verbose:
-        print "Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0])
+    logger.debug("Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0]))
     for torrent in request[-1].json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
             torrent_found = True
@@ -185,8 +198,7 @@ while last_fetched_torrent_id[0] > last_seen_torrent:
             str(page)))
 
 if not torrent_found:
-    if verbose:
-        print "No new torrents found, exiting."
+    logger.info("No new torrents found, exiting.")
     exit(0)
 
 try:
@@ -206,22 +218,21 @@ try:
 
     s.sendmail(from_email, recipient, msg.as_string())
     s.quit()
+    logger.info("Success, email with torrents sent to %s" % recipient)
 except SMTPRecipientsRefused as e:
-    sys.stderr.write("Recipients were refused\n")
-    sys.stderr.write(e)
+    logger.critical("Recipients were refused\n")
+    logger.critical(e)
     exit(1)
 except SMTPHeloError:
-    sys.stderr.write("The mail server didn't reply to our HELO, exiting\n")
+    logger.critical("The mail server didn't reply to our HELO, exiting\n")
     exit(1)
 except SMTPSenderRefused:
-    sys.stderr.write(
-        "The mail server doesn't allow this user to send mail. Are you sure this user exits?\n")
+    logger.critical("The mail server doesn't allow this user to send mail. Are you sure this user exits?\n")
     exit(1)
 except SMTPDataError:
-    sys.stderr.write(
-        "The server replied with an unxpected error code. exiting\n")
+    logger.critical("The server replied with an unxpected error code. exiting\n")
     exit(1)
 except BaseException as e:
-    sys.stderr.write("An unhandled error occured. The program will now quit\n")
-    sys.stderr.write("> " + str(e) + "\n")
+    logger.critical("An unhandled error occured. The program will now quit\n")
+    logger.critical("> " + str(e) + "\n")
     exit(1)
