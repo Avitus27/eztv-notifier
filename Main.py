@@ -25,9 +25,15 @@ parser = argparse.ArgumentParser(
     description="Python based tool for getting torrents of shows from eztv",
     prog=PROG_NAME,
     epilog="Values passed as arguments override the .env")
-parser.add_argument('--version', action='version', version='%(PROG_NAME)s %(VERSION)s' % locals())
-parser.add_argument('-v', '--verbose', action="store_true",
-                    help="Generates more output for debugging")
+parser.add_argument(
+    '--version',
+    action='version',
+    version='%(PROG_NAME)s %(VERSION)s' %
+    locals())
+parser.add_argument('-v', '--verbose', action="count",
+                    help="[-v|vv|vvv] Generates more output for debugging. More v, more output.", default=0)
+parser.add_argument('-q', '--quiet', action="store_true",
+                    help="Disable all output, including critical errors. Overrides verbose setting if set.")
 parser.add_argument(
     '-e',
     '--env',
@@ -79,7 +85,7 @@ parser.add_argument(
     help="Set the root of the API. e.g. ./Main --api https://eztv.ag/api/get-torrents")
 
 verbose = False
-verboseLevel = 0;
+verboseLevel = 0
 setup_error = False
 use_env = True
 args = parser.parse_args()
@@ -90,11 +96,17 @@ logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
 if args.verbose:
-    verbose = True
-    verboseLevel += 1
+    verboseLevel = args.verbose
 
-if verbose:
+if verboseLevel >= 3:
+    logger.setLevel(logging.SPAM)
+elif verboseLevel >= 2:
     logger.setLevel(logging.DEBUG)
+elif verboseLevel >= 1:
+    logger.setLevel(logging.VERBOSE)
+
+if args.quiet:
+    logger.setLevel(logging.NOTSET)
 
 if args.env == "False":
     use_env = False
@@ -172,7 +184,9 @@ rich_text = "New Torrents available:<br>\n"
 logger.debug("Last seen torrent: %d" % last_seen_torrent)
 
 while last_fetched_torrent_id[0] > last_seen_torrent:
-    logger.debug("Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0]))
+    logger.debug(
+        "Currently on page %d, last fetched torrent: %d" %
+        (page, last_fetched_torrent_id[0]))
     for torrent in request[-1].json()['torrents']:
         if any(show in torrent['title'] for show in show_list):
             torrent_found = True
@@ -227,10 +241,12 @@ except SMTPHeloError:
     logger.critical("The mail server didn't reply to our HELO, exiting\n")
     exit(1)
 except SMTPSenderRefused:
-    logger.critical("The mail server doesn't allow this user to send mail. Are you sure this user exits?\n")
+    logger.critical(
+        "The mail server doesn't allow this user to send mail. Are you sure this user exits?\n")
     exit(1)
 except SMTPDataError:
-    logger.critical("The server replied with an unxpected error code. exiting\n")
+    logger.critical(
+        "The server replied with an unxpected error code. exiting\n")
     exit(1)
 except BaseException as e:
     logger.critical("An unhandled error occured. The program will now quit\n")
