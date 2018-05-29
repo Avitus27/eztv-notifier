@@ -86,7 +86,6 @@ parser.add_argument(
 
 verbose = False
 verboseLevel = 0
-setup_error = False
 use_env = True
 args = parser.parse_args()
 api_root = "https://eztv.ag/api/get-torrents"
