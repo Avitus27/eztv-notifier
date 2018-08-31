@@ -1,3 +1,5 @@
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2161/badge)](https://bestpractices.coreinfrastructure.org/projects/2161)
+
 # eztv-notifier
 A Python based email notifier for eztv
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 
 import os
 import json
@@ -153,16 +153,18 @@ if args.api:
 file = open('last_torrent', 'r')
 last_seen_torrent = int(file.readline())
 file.close()
+logger.debug("last_seen_torrent: %d" % last_seen_torrent)
 
 # get JSON from EZTV
 request = []
+request_string_base = api_root + '?limit=' + str(max_torrents) + '&page='
 request.append(
-    requests.get(
-        api_root +
-        '?limit=' +
-        str(max_torrents) +
-        '&page=1'))
+    requests.get(request_string_base + '1'))
+logger.debug("Current Request String: %s" % request_string_base + '1')
+
 if request[-1].status_code == 200:
+    logger.debug("First request successful")
+    logger.spam("Response Content: %s" % request[-1].json())
     file = open('last_torrent', 'w')
     newest_torrent = str(
         request[-1].json()['torrents'][0]['date_released_unix'])
@@ -182,33 +184,37 @@ rich_text = "New Torrents available:<br>\n"
 
 logger.debug("Last seen torrent: %d" % last_seen_torrent)
 
-while last_fetched_torrent_id[0] > last_seen_torrent:
-    logger.debug(
-        "Currently on page %d, last fetched torrent: %d" %
-        (page, last_fetched_torrent_id[0]))
-    for torrent in request[-1].json()['torrents']:
-        if any(show in torrent['title'] for show in show_list):
-            torrent_found = True
-            if rich_mail:
-                rich_text += "<a rel=\"nofollow\" href=\"" + \
-                    str(torrent['magnet_url']) + "\">" + \
-                    str(torrent['title']) + "</a><br>\r\n"
-            else:
-                rich_text += str(torrent['title']) + \
-                    ":\t" + str(torrent['magnet_url']) + "<br><br>\r\n"
-            plain_text += str(torrent['title']) + "\t" + \
-                str(torrent['magnet_url']) + "\r\n\r\n"
+try:
+    while last_fetched_torrent_id[0] > last_seen_torrent:
+        logger.debug(
+            "Currently on page %d, last fetched torrent: %d" %
+            (page, last_fetched_torrent_id[0]))
+        for torrent in request[-1].json()['torrents']:
+            if any(show in torrent['title'] for show in show_list):
+                torrent_found = True
+                if rich_mail:
+                    rich_text += "<a rel=\"nofollow\" href=\"" + \
+                        str(torrent['magnet_url']) + "\">" + \
+                        str(torrent['title']) + "</a><br>\r\n"
+                else:
+                    rich_text += str(torrent['title']) + ":\t" + \
+                        str(torrent['magnet_url']) + "<br><br>\r\n"
+                plain_text += str(torrent['title']) + "\t" + \
+                    str(torrent['magnet_url']) + "\r\n\r\n"
 
-    last_fetched_torrent_id[0] = int(request[-1].json(
-    )['torrents'][max_torrents - 1]['date_released_unix'])
-    page += 1
-    request.append(
-        requests.get(
-            api_root +
-            '?limit=' +
-            str(max_torrents) +
-            '&page=' +
-            str(page)))
+        last_fetched_torrent_id[0] = int(request[-1].json(
+        )['torrents'][max_torrents - 1]['date_released_unix'])
+        page += 1
+        request.append(
+            requests.get(
+                api_root +
+                '?limit=' +
+                str(max_torrents) +
+                '&page=' +
+                str(page)))
+except Exception as e:
+    logger.critical(e.Message)
+
 
 if not torrent_found:
     logger.info("No new torrents found, exiting.")
