@@ -1,7 +1,6 @@
 #!/usr/bin/python2.7
 
 import os
-import json
 import requests
 import sys
 import argparse
@@ -150,9 +149,9 @@ if args.shows:
 if args.api:
     api_root = args.api
 
-file = open('last_torrent', 'r')
-last_seen_torrent = int(file.readline())
-file.close()
+checkpoint_file = open('last_torrent', 'r')
+last_seen_torrent = int(checkpoint_file.readline())
+checkpoint_file.close()
 logger.debug("last_seen_torrent: %d" % last_seen_torrent)
 
 # get JSON from EZTV
@@ -165,11 +164,11 @@ logger.debug("Current Request String: %s" % request_string_base + '1')
 if request[-1].status_code == 200:
     logger.debug("First request successful")
     logger.spam("Response Content: %s" % request[-1].json())
-    file = open('last_torrent', 'w')
+    checkpoint_file = open('last_torrent', 'w')
     newest_torrent = str(
         request[-1].json()['torrents'][0]['date_released_unix'])
-    file.write(newest_torrent)
-    file.close()
+    checkpoint_file.write(newest_torrent)
+    checkpoint_file.close()
 else:
     logger.critical(request[-1].status_code + "\n")
     exit(1)
@@ -213,7 +212,7 @@ try:
                 '&page=' +
                 str(page)))
 except Exception as e:
-    logger.critical(e.Message)
+    logger.critical(str(e))
 
 
 if not torrent_found:
