@@ -156,10 +156,10 @@ logger.debug("last_seen_torrent: %d" % last_seen_torrent)
 
 # get JSON from EZTV
 request = []
-request_string_base = api_root + '?limit=' + str(max_torrents) + '&page='
+payload = {'limit': str(max_torrents), 'page': 1}
 request.append(
-    requests.get(request_string_base + '1'))
-logger.debug("Current Request String: %s" % request_string_base + '1')
+    requests.get(api_root, params=payload))
+logger.debug("Current Request String: %s" % request[-1].url)
 
 if request[-1].status_code == 200:
     logger.debug("First request successful")
