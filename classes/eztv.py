@@ -23,6 +23,9 @@ class Eztv:
     last_seen_torrent = 0
     max_torrents = 5
     logger = verboselogs.VerboseLogger('%(prog)s')
+    verboseLevel = 0
+    plain_text = ""
+    rich_text = ""
     
     def __init__(self, args):
         self.logger.addHandler(logging.StreamHandler())
@@ -31,11 +34,11 @@ class Eztv:
         if args.verbose:
             verboseLevel = args.verbose
 
-        if verboseLevel >= 3:
+        if self.verboseLevel >= 3:
             self.logger.setLevel(logging.SPAM)
-        elif verboseLevel >= 2:
+        elif self.verboseLevel >= 2:
             self.logger.setLevel(logging.DEBUG)
-        elif verboseLevel >= 1:
+        elif self.verboseLevel >= 1:
             self.logger.setLevel(logging.VERBOSE)
 
         if args.quiet:
@@ -63,43 +66,43 @@ class Eztv:
             if os.environ.get("API_ROOT"):
                 api_root = os.environ.get("API_ROOT")
         else:
-            rich_mail = args.rich
-            use_smtp = args.smtp
+            self.rich_mail = args.rich
+            self.use_smtp = args.smtp
 
         if args.recipient:
-            recipient = args.recipient
+            self.recipient = args.recipient
         if args.sender:
-            from_email = args.sender
+            self.from_email = args.sender
         if args.host:
-            mail_host = args.host
+            self.mail_host = args.host
         if args.port:
-            mail_port = args.port
+            self.mail_port = args.port
         if args.subject:
-            mail_subject = args.subject
+            self.mail_subject = args.subject
         if not self.use_smtp:
-            username = os.environ.get("MAIL_USER")
-            password = os.environ.get("MAIL_PASS")
+            self.username = os.environ.get("MAIL_USER")
+            self.password = os.environ.get("MAIL_PASS")
         if args.max:
-            max_torrents = args.max
+            self.max_torrents = args.max
         if args.shows:
-            show_list = args.show
+            self.show_list = args.show
         if args.api:
-            api_root = args.api
+            self.api_root = args.api
 
     def get_torrents(self):
         while last_fetched_torrent_id[0] > last_seen_torrent:
-            logger.debug("Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0]))
+            self.logger.debug("Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0]))
             for torrent in request[-1].json()['torrents']:
                 if any(show in torrent['title'] for show in show_list):
                     torrent_found = True
                     if rich_mail:
-                        rich_text += "<a rel=\"nofollow\" href=\"" + \
+                        self.rich_text += "<a rel=\"nofollow\" href=\"" + \
                             str(torrent['magnet_url']) + "\">" + \
                             str(torrent['title']) + "</a><br>\r\n"
                     else:
-                        rich_text += str(torrent['title']) + ":\t" + \
+                        self.rich_text += str(torrent['title']) + ":\t" + \
                             str(torrent['magnet_url']) + "<br><br>\r\n"
-                    plain_text += str(torrent['title']) + "\t" + \
+                    self.plain_text += str(torrent['title']) + "\t" + \
                         str(torrent['magnet_url']) + "\r\n\r\n"
         
             last_fetched_torrent_id[0] = int(request[-1].json(
@@ -121,43 +124,45 @@ class Eztv:
         return self.last_seen_torrent
         
     def set_checkpoint(self, last_seen_torrent):
-        print('this will set the checkpoint')
+        checkpoint_file = open('last_torrent', 'w')
+        checkpoint_file.write(str(last_seen_torrent))
+        checkpoint_file.close()
     
     def send_email(self):
         try:
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = mail_subject
-            msg['From'] = from_email
-            msg['To'] = recipient
-            part1 = MIMEText(plain_text, 'plain')
-            part2 = MIMEText(rich_text, 'html')
+            msg['Subject'] = self.mail_subject
+            msg['From'] = self.from_email
+            msg['To'] = self.recipient
+            part1 = MIMEText(self.plain_text, 'plain')
+            part2 = MIMEText(self.rich_text, 'html')
             msg.attach(part1)
             msg.attach(part2)
 
-            s = SMTP(mail_host)
+            s = SMTP(self.mail_host)
 
-            if not use_smtp:
-                s.login(username, password)
+            if not self.use_smtp:
+                s.login(self.username, self.password)
 
-            s.sendmail(from_email, recipient, msg.as_string())
+            s.sendmail(self.from_email, self.recipient, msg.as_string())
             s.quit()
-            logger.info("Success, email with torrents sent to %s" % recipient)
+            self.logger.info("Success, email with torrents sent to %s" % self.recipient)
         except SMTPRecipientsRefused as e:
-            logger.critical("Recipients were refused\n")
-            logger.critical(e)
+            self.logger.critical("Recipients were refused\n")
+            self.logger.critical(e)
             exit(1)
         except SMTPHeloError:
-            logger.critical("The mail server didn't reply to our HELO, exiting\n")
+            self.logger.critical("The mail server didn't reply to our HELO, exiting\n")
             exit(1)
         except SMTPSenderRefused:
-            logger.critical(
+            self.logger.critical(
                 "The mail server doesn't allow this user to send mail. Are you sure this user exits?\n")
             exit(1)
         except SMTPDataError:
-            logger.critical(
+            self.logger.critical(
                 "The server replied with an unxpected error code. exiting\n")
             exit(1)
         except BaseException as e:
-            logger.critical("An unhandled error occured. The program will now quit\n")
-            logger.critical("> " + str(e) + "\n")
+            self.logger.critical("An unhandled error occured. The program will now quit\n")
+            self.logger.critical("> " + str(e) + "\n")
             exit(1)
