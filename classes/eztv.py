@@ -1,5 +1,3 @@
-#!/usr/bin/python2.7
-
 import os
 import requests
 import sys
@@ -91,6 +89,7 @@ class Eztv:
 
     def get_torrents(self):
         while last_fetched_torrent_id[0] > last_seen_torrent:
+            self.logger.spam(request)
             self.logger.debug("Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0]))
             for torrent in request[-1].json()['torrents']:
                 if any(show in torrent['title'] for show in show_list):
@@ -104,7 +103,7 @@ class Eztv:
                             str(torrent['magnet_url']) + "<br><br>\r\n"
                     self.plain_text += str(torrent['title']) + "\t" + \
                         str(torrent['magnet_url']) + "\r\n\r\n"
-        
+
             last_fetched_torrent_id[0] = int(request[-1].json(
             )['torrents'][max_torrents - 1]['date_released_unix'])
             page += 1
@@ -115,7 +114,8 @@ class Eztv:
                     str(max_torrents) +
                     '&page=' +
                     str(page)))
-                    
+        return torrent_found
+
     def get_checkpoint(self):
         checkpoint_file = open('last_torrent', 'r')
         self.last_seen_torrent = int(checkpoint_file.readline())
@@ -127,7 +127,7 @@ class Eztv:
         checkpoint_file = open('last_torrent', 'w')
         checkpoint_file.write(str(last_seen_torrent))
         checkpoint_file.close()
-    
+
     def send_email(self):
         try:
             msg = MIMEMultipart('alternative')
