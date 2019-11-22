@@ -11,6 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 from smtplib import SMTP, SMTPRecipientsRefused, SMTPHeloError, SMTPSenderRefused, SMTPDataError
 
+
 class Eztv:
     """An EZTV class"""
 
@@ -95,13 +96,14 @@ class Eztv:
         self.logger.debug(self.last_torrent_location)
         self.get_checkpoint()
         if self.last_seen_torrent == -1:
-            self.logger.critical("There was an error when getting the last_torrent. Exiting")
+            self.logger.critical(
+                "There was an error when getting the last_torrent. Exiting")
             exit(1)
 
     def get_torrents(self):
         """Fetches the pages of torrents to scan through and returns true if the object has email content stored."""
         last_fetched_torrent_id = [0]
-        last_fetched_torrent_id[0] = sys.maxint
+        last_fetched_torrent_id[0] = sys.maxsize
         torrent_found = False
         request = []
         payload = {'limit': str(self.max_torrents), 'page': self.page}
@@ -119,11 +121,13 @@ class Eztv:
             checkpoint_file.close()
         else:
             self.logger.critical(request[-1].status_code + "\n")
-            exit(1) #this should be a throw
+            exit(1)  # this should be a throw
 
         while last_fetched_torrent_id[0] > self.last_seen_torrent:
             self.logger.spam(request)
-            self.logger.debug("Currently on page %d, last fetched torrent: %d" % (self.page, last_fetched_torrent_id[0]))
+            self.logger.debug(
+                "Currently on page %d, last fetched torrent: %d" %
+                (self.page, last_fetched_torrent_id[0]))
             for torrent in request[-1].json()['torrents']:
                 if any(show in torrent['title'] for show in self.show_list):
                     self.logger.debug("Torrent Found")
@@ -158,7 +162,8 @@ class Eztv:
             checkpoint_file.close()
             self.logger.debug("last_seen_torrent: %d" % self.last_seen_torrent)
         except EnvironmentError as e:
-            self.logger.critical("An error occured when trying to get the id of the most recent torrent. Here's the trace: {}".format(e))
+            self.logger.critical(
+                "An error occured when trying to get the id of the most recent torrent. Here's the trace: {}".format(e))
             self.last_seen_torrent = -1
         return self.last_seen_torrent
 
@@ -192,13 +197,16 @@ class Eztv:
 
             s.sendmail(self.from_email, self.recipient, msg.as_string())
             s.quit()
-            self.logger.info("Success, email with torrents sent to %s" % self.recipient)
+            self.logger.info(
+                "Success, email with torrents sent to %s" %
+                self.recipient)
         except SMTPRecipientsRefused as e:
             self.logger.critical("Recipients were refused\n")
             self.logger.critical(e)
             exit(1)
         except SMTPHeloError:
-            self.logger.critical("The mail server didn't reply to our HELO, exiting\n")
+            self.logger.critical(
+                "The mail server didn't reply to our HELO, exiting\n")
             exit(1)
         except SMTPSenderRefused:
             self.logger.critical(
@@ -209,6 +217,7 @@ class Eztv:
                 "The server replied with an unxpected error code. exiting\n")
             exit(1)
         except BaseException as e:
-            self.logger.critical("An unhandled error occured. The program will now quit\n")
+            self.logger.critical(
+                "An unhandled error occured. The program will now quit\n")
             self.logger.critical("> " + str(e) + "\n")
             exit(1)
