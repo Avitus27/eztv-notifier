@@ -13,24 +13,27 @@ from smtplib import SMTP, SMTPRecipientsRefused, SMTPHeloError, SMTPSenderRefuse
 
 class Eztv:
     """An EZTV class"""
-    
+
     verbose = False
     use_env = True
-    #args = parser.parse_args()
     api_root = "https://eztv.ag/api/get-torrents"
     last_seen_torrent = 0
     max_torrents = 5
+    page = 1
     logger = verboselogs.VerboseLogger('%(prog)s')
     verboseLevel = 0
     plain_text = ""
     rich_text = ""
-    
+    last_torrent_location = "./last_torrent"
+
     def __init__(self, args):
+        """Initialize the EZTV object"""
         self.logger.addHandler(logging.StreamHandler())
         self.logger.setLevel(logging.INFO)
-        
+        self.last_seen_torrent = 0
+
         if args.verbose:
-            verboseLevel = args.verbose
+            self.verboseLevel = args.verbose
 
         if self.verboseLevel >= 3:
             self.logger.setLevel(logging.SPAM)
@@ -62,7 +65,7 @@ class Eztv:
             self.rich_mail = os.environ.get("FULL_RICH_MAIL") or args.rich
             self.use_smtp = os.environ.get("USE_SMTP") or args.smtp
             if os.environ.get("API_ROOT"):
-                api_root = os.environ.get("API_ROOT")
+                self.api_root = os.environ.get("API_ROOT")
         else:
             self.rich_mail = args.rich
             self.use_smtp = args.smtp
@@ -86,15 +89,46 @@ class Eztv:
             self.show_list = args.show
         if args.api:
             self.api_root = args.api
+        if args.last_torrent:
+            self.last_torrent_location = args.last_torrent
+
+        self.logger.debug(self.last_torrent_location)
+        self.get_checkpoint()
+        if self.last_seen_torrent == -1:
+            self.logger.critical("There was an error when getting the last_torrent. Exiting")
+            exit(1)
 
     def get_torrents(self):
-        while last_fetched_torrent_id[0] > last_seen_torrent:
+        """Fetches the pages of torrents to scan through and returns true if the object has email content stored."""
+        last_fetched_torrent_id = [0]
+        last_fetched_torrent_id[0] = sys.maxint
+        torrent_found = False
+        request = []
+        payload = {'limit': str(self.max_torrents), 'page': self.page}
+        request.append(
+            requests.get(self.api_root, params=payload))
+        self.logger.debug("Current Request String: %s" % request[-1].url)
+
+        if request[-1].status_code == 200:
+            self.logger.debug("First request successful")
+            self.logger.spam("Response Content: %s" % request[-1].json())
+            checkpoint_file = open(self.last_torrent_location, 'w')
+            newest_torrent = str(
+                request[-1].json()['torrents'][0]['date_released_unix'])
+            checkpoint_file.write(newest_torrent)
+            checkpoint_file.close()
+        else:
+            self.logger.critical(request[-1].status_code + "\n")
+            exit(1) #this should be a throw
+
+        while last_fetched_torrent_id[0] > self.last_seen_torrent:
             self.logger.spam(request)
-            self.logger.debug("Currently on page %d, last fetched torrent: %d" % (page, last_fetched_torrent_id[0]))
+            self.logger.debug("Currently on page %d, last fetched torrent: %d" % (self.page, last_fetched_torrent_id[0]))
             for torrent in request[-1].json()['torrents']:
-                if any(show in torrent['title'] for show in show_list):
+                if any(show in torrent['title'] for show in self.show_list):
+                    self.logger.debug("Torrent Found")
                     torrent_found = True
-                    if rich_mail:
+                    if self.rich_mail:
                         self.rich_text += "<a rel=\"nofollow\" href=\"" + \
                             str(torrent['magnet_url']) + "\">" + \
                             str(torrent['title']) + "</a><br>\r\n"
@@ -105,30 +139,42 @@ class Eztv:
                         str(torrent['magnet_url']) + "\r\n\r\n"
 
             last_fetched_torrent_id[0] = int(request[-1].json(
-            )['torrents'][max_torrents - 1]['date_released_unix'])
-            page += 1
+            )['torrents'][self.max_torrents - 1]['date_released_unix'])
+            self.page += 1
             request.append(
                 requests.get(
-                    api_root +
+                    self.api_root +
                     '?limit=' +
-                    str(max_torrents) +
+                    str(self.max_torrents) +
                     '&page=' +
-                    str(page)))
+                    str(self.page)))
         return torrent_found
 
     def get_checkpoint(self):
-        checkpoint_file = open('last_torrent', 'r')
-        self.last_seen_torrent = int(checkpoint_file.readline())
-        checkpoint_file.close()
-        self.logger.debug("last_seen_torrent: %d" % self.last_seen_torrent)
+        """Get the newest torrent that was scanned on the last run."""
+        try:
+            checkpoint_file = open(self.last_torrent_location, 'r')
+            self.last_seen_torrent = int(checkpoint_file.readline())
+            checkpoint_file.close()
+            self.logger.debug("last_seen_torrent: %d" % self.last_seen_torrent)
+        except EnvironmentError as e:
+            self.logger.critical("An error occured when trying to get the id of the most recent torrent. Here's the trace: {}".format(e))
+            self.last_seen_torrent = -1
         return self.last_seen_torrent
-        
+
     def set_checkpoint(self, last_seen_torrent):
-        checkpoint_file = open('last_torrent', 'w')
+        """Save the timestamp of the newest torrent.
+
+        This function saves the newest torrent we see so that we don't re-scan pages of torrents.
+
+        args:
+        last_seen_torrent -- the unix format timestamp of the newest torrent. This will be taken from the response from eztv."""
+        checkpoint_file = open(self.last_torrent_location, 'w')
         checkpoint_file.write(str(last_seen_torrent))
         checkpoint_file.close()
 
     def send_email(self):
+        """Send the generated email to the designated recipient."""
         try:
             msg = MIMEMultipart('alternative')
             msg['Subject'] = self.mail_subject

@@ -40,6 +40,9 @@ parser.add_argument(
     nargs='?',
     help="Sets the path to the .env file. If the string is 'False', then the program will not look for a .env file (not recommended). Default is the directory the file is running in.")
 parser.add_argument(
+    '-l', '--last-torrent', action='store',
+    help="Sets the path to the last_torrent file. If not set, we default to the current working directory, this may not be the same directory as the program")
+parser.add_argument(
     '-r',
     '--recipient',
     help="Specifies what email address the script should send to.")
@@ -86,6 +89,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 eztv = Eztv(args)
+
 # get JSON from EZTV
 request = []
 payload = {'limit': str(eztv.max_torrents), 'page': 1}
@@ -96,11 +100,12 @@ eztv.logger.debug("Current Request String: %s" % request[-1].url)
 if request[-1].status_code == 200:
     eztv.logger.debug("First request successful")
     eztv.logger.spam("Response Content: %s" % request[-1].json())
-    checkpoint_file = open('last_torrent', 'w')
     newest_torrent = str(
         request[-1].json()['torrents'][0]['date_released_unix'])
-    checkpoint_file.write(newest_torrent)
-    checkpoint_file.close()
+    eztv.logger.debug(
+        "last_torrent from file: %s; newest_torrent from eztv: %s" %
+        (eztv.last_seen_torrent, newest_torrent))
+    eztv.set_checkpoint(newest_torrent)
 else:
     eztv.logger.critical(request[-1].status_code + "\n")
     exit(1)
@@ -116,37 +121,12 @@ rich_text = "New Torrents available:<br>\n"
 eztv.logger.debug("Last seen torrent: %d" % eztv.last_seen_torrent)
 
 try:
-    while last_fetched_torrent_id[0] > last_seen_torrent:
-        eztv.logger.debug(
-            "Currently on page %d, last fetched torrent: %d" %
-            (page, last_fetched_torrent_id[0]))
-        for torrent in request[-1].json()['torrents']:
-            if any(show in torrent['title'] for show in show_list):
-                torrent_found = True
-                if rich_mail:
-                    rich_text += "<a rel=\"nofollow\" href=\"" + \
-                        str(torrent['magnet_url']) + "\">" + \
-                        str(torrent['title']) + "</a><br>\r\n"
-                else:
-                    rich_text += str(torrent['title']) + ":\t" + \
-                        str(torrent['magnet_url']) + "<br><br>\r\n"
-                plain_text += str(torrent['title']) + "\t" + \
-                    str(torrent['magnet_url']) + "\r\n\r\n"
-
-        last_fetched_torrent_id[0] = int(request[-1].json(
-        )['torrents'][max_torrents - 1]['date_released_unix'])
-        page += 1
-        request.append(
-            requests.get(
-                api_root +
-                '?limit=' +
-                str(max_torrents) +
-                '&page=' +
-                str(page)))
+    torrent_found = eztv.get_torrents()
 except Exception as e:
     eztv.logger.critical(str(e))
-
 
 if not torrent_found:
     eztv.logger.info("No new torrents found, exiting.")
     exit(0)
+
+eztv.send_email()
